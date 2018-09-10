@@ -138,15 +138,23 @@ function vrSetup(gl, programInfo, buffers, noVRRender) {
       canvas.width = eye.renderWidth * 2;
       canvas.height = eye.renderHeight;
 
-      const vrCallback = () => {
+      var then = 0;
+
+      const vrCallback = (now) => {
           if (vrDisplay == null || !inVR) {
               return;
           }
+
           // reregister callback if we're still in VR
           vrDisplay.requestAnimationFrame(vrCallback);
 
+          // calculate time delta for rotation
+          now *= 0.001;  // convert to seconds
+          const deltaTime = now - then;
+          then = now;
+
           // render scene
-          renderVR(gl, programInfo, buffers);
+          renderVR(gl, programInfo, buffers, deltaTime);
       };
       // register callback
       vrDisplay.requestAnimationFrame(vrCallback);
@@ -211,7 +219,7 @@ function initBuffers(gl) {
 
 
 // entry point for WebVR, called by vrCallback()
-function renderVR(gl, programInfo, buffers) {
+function renderVR(gl, programInfo, buffers, deltaTime) {
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0.5, 0.5, 0.5, 1.0);  // Clear to grey, fully opaque
     gl.clearDepth(1.0);                 // Clear everything
@@ -222,6 +230,7 @@ function renderVR(gl, programInfo, buffers) {
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+    cubeRotation += deltaTime;
     renderEye(gl, programInfo, buffers, true);
     renderEye(gl, programInfo, buffers, false);
     vrDisplay.submitFrame();
@@ -263,7 +272,7 @@ function render(gl, programInfo, buffers, deltaTime) {
     cubeRotation += deltaTime;
 
 
-    drawScene(gl, programInfo, buffers, projectionMatrix, viewMatrix, true);
+    drawScene(gl, programInfo, buffers, projectionMatrix, viewMatrix);
 }
 
 function renderEye(gl, programInfo, buffers, isLeft) {
@@ -284,13 +293,13 @@ function renderEye(gl, programInfo, buffers, isLeft) {
     }
     // we don't want auto-rotation in VR mode, so we directly
     // use the view matrix
-    drawScene(gl, programInfo, buffers, projection, view, false);
+    drawScene(gl, programInfo, buffers, projection, view);
 }
 
 //
 // Draw the scene.
 //
-function drawScene(gl, programInfo, buffers, projectionMatrix, viewMatrix, addRotation) {
+function drawScene(gl, programInfo, buffers, projectionMatrix, viewMatrix) {
 
 
   // Set the drawing position to the "identity" point, which is
@@ -305,20 +314,16 @@ function drawScene(gl, programInfo, buffers, projectionMatrix, viewMatrix, addRo
                  modelViewMatrix,     // matrix to translate
                  [-0.0, 0.0, -6.0]);  // amount to translate
 
+  mat4.rotate(modelViewMatrix,  // destination matrix
+              modelViewMatrix,  // matrix to rotate
+              cubeRotation,     // amount to rotate in radians
+              [0, 0, 1]);       // axis to rotate around (Z)
+  mat4.rotate(modelViewMatrix,  // destination matrix
+              modelViewMatrix,  // matrix to rotate
+              cubeRotation * .7     ,// amount to rotate in radians
+              [0, 1, 0]);       // axis to rotate around (X)
 
-  // We only want to rotate in the webGL case
-  if (addRotation) {
-    mat4.rotate(modelViewMatrix,  // destination matrix
-                modelViewMatrix,  // matrix to rotate
-                cubeRotation,     // amount to rotate in radians
-                [0, 0, 1]);       // axis to rotate around (Z)
-    mat4.rotate(modelViewMatrix,  // destination matrix
-                modelViewMatrix,  // matrix to rotate
-                cubeRotation * .7     ,// amount to rotate in radians
-                [0, 1, 0]);       // axis to rotate around (X)
-  }
-
-  // Postmultiply the view matrix
+  // Premultiply the view matrix
   mat4.multiply(modelViewMatrix, viewMatrix, modelViewMatrix);
 
 
