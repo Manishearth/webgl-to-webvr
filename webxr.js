@@ -1,6 +1,8 @@
 var cubeRotation = 0.0;
 var inVR = false;
-var vrDisplay;
+var xrSession;
+var xr_frame;
+var enterVR;
 const canvas = document.querySelector('#canvas');
 
 main();
@@ -91,80 +93,51 @@ function main() {
   vrSetup(gl, programInfo, buffers, renderCallback);
   // Start rendering
   requestAnimationFrame(renderCallback);
+
+
+  enterVR = function enterVR() {
+    if (xrSession != null) {
+        inVR = true;
+        // hand the canvas to the WebVR API
+        xrSession.baseLayer = new XRWebGLLayer(xrSession, gl, {})
+
+        const vrCallback = (now, frame) => {
+            if (xrSession == null || !inVR) {
+                return;
+            }
+
+            xr_frame = frame;
+
+            // reregister callback if we're still in VR
+            xrSession.requestAnimationFrame(vrCallback);
+
+            // calculate time delta for rotation
+            now *= 0.001;  // convert to seconds
+            const deltaTime = now - then;
+            then = now;
+
+            // render scene
+            renderVR(gl, programInfo, buffers, deltaTime);
+        };
+        // register callback
+        xrSession.requestAnimationFrame(vrCallback);
+    }
+  };
 }
 
-// This function is triggered when the user clicks the "enter VR" button
-function enterVR() {
-  if (vrDisplay != null) {
-      inVR = true;
-      // hand the canvas to the WebVR API
-      vrDisplay.requestPresent([{ source: canvas }]);
 
-      // requestPresent() will request permission to enter VR mode,
-      // and once the user has done this our `vrdisplaypresentchange`
-      // callback will be triggered
-  }
-}
 
 // Set up the VR display and callbacks
 function vrSetup(gl, programInfo, buffers, noVRRender) {
-  if (!navigator.getVRDisplays) {
+  if (!navigator.xr) {
     alert("Your browser does not support WebVR");
     return;
   }
-  navigator.getVRDisplays().then(displays => {
-      if (displays.length === 0) {
-          return;
-      }
-      vrDisplay = displays[displays.length - 1];
+  navigator.xr.requestSession({mode: "immersive-vr"}).then((s) => {
 
-      // optional, but recommended
-      vrDisplay.depthNear = 0.1;
-      vrDisplay.depthFar = 100.0;
+      xrSession = s;
   });
 
-  window.addEventListener('vrdisplaypresentchange', () => {
-    // no VR display, exit
-    if (vrDisplay == null)
-        return;
-
-    // are we entering or exiting VR?
-    if (vrDisplay.isPresenting) {
-      // We should make our canvas the size expected
-      // by WebVR
-      const eye = vrDisplay.getEyeParameters("left");
-      // multiply by two since we're rendering both eyes side
-      // by side
-      canvas.width = eye.renderWidth * 2;
-      canvas.height = eye.renderHeight;
-
-      var then = 0;
-
-      const vrCallback = (now) => {
-          if (vrDisplay == null || !inVR) {
-              return;
-          }
-
-          // reregister callback if we're still in VR
-          vrDisplay.requestAnimationFrame(vrCallback);
-
-          // calculate time delta for rotation
-          now *= 0.001;  // convert to seconds
-          const deltaTime = now - then;
-          then = now;
-
-          // render scene
-          renderVR(gl, programInfo, buffers, deltaTime);
-      };
-      // register callback
-      vrDisplay.requestAnimationFrame(vrCallback);
-    } else {
-      inVR = false;
-      canvas.width = 640;
-      canvas.height = 480;
-      requestAnimationFrame(noVRRender);
-    }
-  });
 }
 
 //
@@ -231,9 +204,11 @@ function renderVR(gl, programInfo, buffers, deltaTime) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     cubeRotation += deltaTime;
-    renderEye(gl, programInfo, buffers, true);
-    renderEye(gl, programInfo, buffers, false);
-    vrDisplay.submitFrame();
+    let pose = xr_frame.getViewerPose();
+
+    for (eye of pose.views()) {
+      renderEye(gl, programInfo, buffers, eye)
+    }
 }
 
 // entry point for non-WebVR rendering
@@ -275,22 +250,26 @@ function render(gl, programInfo, buffers, deltaTime) {
     drawScene(gl, programInfo, buffers, projectionMatrix, viewMatrix);
 }
 
-function renderEye(gl, programInfo, buffers, isLeft) {
+function renderEye(gl, programInfo, buffers, eye) {
     let width = canvas.width;
     let height = canvas.height;
     let projection, view;
-    let frameData = new VRFrameData();
-    vrDisplay.getFrameData(frameData);
+    console.log("raf")
+    let vp = xrSession.baseLayer.getViewport(eye);
+    gl.viewport(vp.x, vp.y, vp.width, vp.height);
+    projection = eye.projectionMatrix;
+    view = eye.viewMatrix;
+
     // choose which half of the canvas to draw on
-    if (true) {
-        gl.viewport(0, 0, width , height);
-        projection = frameData.leftProjectionMatrix;
-        view = frameData.leftViewMatrix;
-    } else {
-        gl.viewport(width / 2, 0, width / 2, height);
-        projection = frameData.rightProjectionMatrix;
-        view = frameData.rightViewMatrix;
-    }
+    // if (isLeft) {
+    //     gl.viewport(0, 0, width / 2, height);
+    //     projection = frameData.leftProjectionMatrix;
+    //     view = frameData.leftViewMatrix;
+    // } else {
+    //     gl.viewport(width / 2, 0, width / 2, height);
+    //     projection = frameData.rightProjectionMatrix;
+    //     view = frameData.rightViewMatrix;
+    // }
     // we don't want auto-rotation in VR mode, so we directly
     // use the view matrix
     drawScene(gl, programInfo, buffers, projection, view);
