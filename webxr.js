@@ -96,32 +96,33 @@ function main() {
 
 
   enterVR = function enterVR() {
-    if (xrSession != null) {
-        inVR = true;
-        // hand the canvas to the WebVR API
-        xrSession.baseLayer = new XRWebGLLayer(xrSession, gl, {})
+    navigator.xr.requestSession({mode: "immersive-vr"}).then((s) => {
+      xrSession = s;
+      inVR = true;
+      // hand the canvas to the WebVR API
+      xrSession.updateRenderState({"baseLayer": new XRWebGLLayer(xrSession, gl, {})})
 
-        const vrCallback = (now, frame) => {
-            if (xrSession == null || !inVR) {
-                return;
-            }
+      const vrCallback = (now, frame) => {
+          if (xrSession == null || !inVR) {
+              return;
+          }
 
-            xr_frame = frame;
+          xr_frame = frame;
 
-            // reregister callback if we're still in VR
-            xrSession.requestAnimationFrame(vrCallback);
+          // reregister callback if we're still in VR
+          xrSession.requestAnimationFrame(vrCallback);
 
-            // calculate time delta for rotation
-            now *= 0.001;  // convert to seconds
-            const deltaTime = now - then;
-            then = now;
+          // calculate time delta for rotation
+          now *= 0.001;  // convert to seconds
+          const deltaTime = now - then;
+          then = now;
 
-            // render scene
-            renderVR(gl, programInfo, buffers, deltaTime);
-        };
-        // register callback
-        xrSession.requestAnimationFrame(vrCallback);
-    }
+          // render scene
+          renderVR(gl, programInfo, buffers, deltaTime);
+      };
+      // register callback
+      xrSession.requestAnimationFrame(vrCallback);
+    });
   };
 }
 
@@ -133,11 +134,6 @@ function vrSetup(gl, programInfo, buffers, noVRRender) {
     alert("Your browser does not support WebVR");
     return;
   }
-  navigator.xr.requestSession({mode: "immersive-vr"}).then((s) => {
-
-      xrSession = s;
-  });
-
 }
 
 //
@@ -255,7 +251,7 @@ function renderEye(gl, programInfo, buffers, eye) {
     let height = canvas.height;
     let projection, view;
     console.log("raf")
-    let vp = xrSession.baseLayer.getViewport(eye);
+    let vp = xrSession.renderState.baseLayer.getViewport(eye);
     gl.viewport(vp.x, vp.y, vp.width, vp.height);
     projection = eye.projectionMatrix;
     view = eye.viewMatrix;
