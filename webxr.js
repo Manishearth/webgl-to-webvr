@@ -202,7 +202,7 @@ function renderVR(gl, programInfo, buffers, deltaTime) {
     cubeRotation += deltaTime;
     let pose = xr_frame.getViewerPose();
 
-    for (eye of pose.views()) {
+    for (eye of pose.views) {
       renderEye(gl, programInfo, buffers, eye)
     }
 }
