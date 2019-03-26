@@ -1,6 +1,7 @@
 var cubeRotation = 0.0;
 var inVR = false;
 var xrSession;
+var xrReferenceSpace;
 var xr_frame;
 var enterVR;
 const canvas = document.querySelector('#canvas');
@@ -98,6 +99,10 @@ function main() {
   enterVR = function enterVR() {
     navigator.xr.requestSession({mode: "immersive-vr"}).then((s) => {
       xrSession = s;
+      xrSession.requestReferenceSpace({ type:'stationary', subtype:'eye-level' })
+      .then((referenceSpace) => {
+        xrReferenceSpace = referenceSpace;
+      })
       inVR = true;
       // hand the canvas to the WebVR API
       xrSession.updateRenderState({"baseLayer": new XRWebGLLayer(xrSession, gl, {})})
@@ -200,7 +205,7 @@ function renderVR(gl, programInfo, buffers, deltaTime) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     cubeRotation += deltaTime;
-    let pose = xr_frame.getViewerPose();
+    let pose = xr_frame.getViewerPose(xrReferenceSpace);
 
     for (eye of pose.views) {
       renderEye(gl, programInfo, buffers, eye)
@@ -250,7 +255,6 @@ function renderEye(gl, programInfo, buffers, eye) {
     let width = canvas.width;
     let height = canvas.height;
     let projection, view;
-    console.log("raf")
     let vp = xrSession.renderState.baseLayer.getViewport(eye);
     gl.viewport(vp.x, vp.y, vp.width, vp.height);
     projection = eye.projectionMatrix;
