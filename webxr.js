@@ -258,7 +258,7 @@ function renderEye(gl, programInfo, buffers, eye) {
     let vp = xrSession.renderState.baseLayer.getViewport(eye);
     gl.viewport(vp.x, vp.y, vp.width, vp.height);
     projection = eye.projectionMatrix;
-    view = eye.viewMatrix;
+    view = eye.transform.inverse.matrix;
 
     // choose which half of the canvas to draw on
     // if (isLeft) {
