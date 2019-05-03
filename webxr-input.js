@@ -212,6 +212,8 @@ function renderVR(gl, programInfo, buffers, deltaTime) {
     let pose = xr_frame.getViewerPose(xrReferenceSpace);
 
     let input_pose = xr_frame.getPose(xrTargetRay, xrReferenceSpace);
+    console.log(`${input_pose.transform.orientation.x} ${input_pose.transform.orientation.y} ${input_pose.transform.orientation.z} ${input_pose.transform.orientation.w} \t${input_pose.transform.position.x} ${input_pose.transform.position.y} ${input_pose.transform.position.z} ${input_pose.transform.position.w}`);
+
     for (eye of pose.views) {
       renderEye(gl, programInfo, buffers, eye, input_pose)
     }
