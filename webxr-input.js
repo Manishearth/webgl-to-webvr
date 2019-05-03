@@ -212,10 +212,9 @@ function renderVR(gl, programInfo, buffers, deltaTime) {
     let pose = xr_frame.getViewerPose(xrReferenceSpace);
 
     let input_pose = xr_frame.getPose(xrTargetRay, xrReferenceSpace);
-    console.log(`${input_pose.transform.orientation.x} ${input_pose.transform.orientation.y} ${input_pose.transform.orientation.z} ${input_pose.transform.orientation.w} \t${input_pose.transform.position.x} ${input_pose.transform.position.y} ${input_pose.transform.position.z} ${input_pose.transform.position.w}`);
-
+    let rotationMatrix = input_pose.transform.matrix;
     for (eye of pose.views) {
-      renderEye(gl, programInfo, buffers, eye, input_pose)
+      renderEye(gl, programInfo, buffers, eye, rotationMatrix)
     }
 }
 
@@ -258,7 +257,7 @@ function render(gl, programInfo, buffers, deltaTime) {
     drawScene(gl, programInfo, buffers, projectionMatrix, viewMatrix);
 }
 
-function renderEye(gl, programInfo, buffers, eye, ip) {
+function renderEye(gl, programInfo, buffers, eye, rotationMatrix) {
     let width = canvas.width;
     let height = canvas.height;
     let projection, view;
@@ -279,13 +278,13 @@ function renderEye(gl, programInfo, buffers, eye, ip) {
     // }
     // we don't want auto-rotation in VR mode, so we directly
     // use the view matrix
-    drawScene(gl, programInfo, buffers, projection, view);
+    drawScene(gl, programInfo, buffers, projection, view, rotationMatrix);
 }
 
 //
 // Draw the scene.
 //
-function drawScene(gl, programInfo, buffers, projectionMatrix, viewMatrix) {
+function drawScene(gl, programInfo, buffers, projectionMatrix, viewMatrix, rotationMatrix) {
 
 
   // Set the drawing position to the "identity" point, which is
@@ -293,21 +292,35 @@ function drawScene(gl, programInfo, buffers, projectionMatrix, viewMatrix) {
   const modelViewMatrix = mat4.create();
 
 
-  // Now move the drawing position a bit to where we want to
-  // start drawing the square.
 
-  mat4.translate(modelViewMatrix,     // destination matrix
-                 modelViewMatrix,     // matrix to translate
-                 [-0.0, 0.0, -6.0]);  // amount to translate
+  if (rotationMatrix) {
+    // premultiply rotation matrix
+    mat4.multiply(modelViewMatrix, rotationMatrix, modelViewMatrix);
+    // Now move the drawing position a bit to where we want to
+    // start drawing the square.
 
-  mat4.rotate(modelViewMatrix,  // destination matrix
-              modelViewMatrix,  // matrix to rotate
-              cubeRotation,     // amount to rotate in radians
-              [0, 0, 1]);       // axis to rotate around (Z)
-  mat4.rotate(modelViewMatrix,  // destination matrix
-              modelViewMatrix,  // matrix to rotate
-              cubeRotation * .7     ,// amount to rotate in radians
-              [0, 1, 0]);       // axis to rotate around (X)
+    mat4.translate(modelViewMatrix,     // destination matrix
+                   modelViewMatrix,     // matrix to translate
+                   [-0.0, 0.0, -6.0]);  // amount to translate
+  } else {
+
+    // Now move the drawing position a bit to where we want to
+    // start drawing the square.
+
+    mat4.translate(modelViewMatrix,     // destination matrix
+                   modelViewMatrix,     // matrix to translate
+                   [-0.0, 0.0, -6.0]);  // amount to translate
+    mat4.rotate(modelViewMatrix,  // destination matrix
+                modelViewMatrix,  // matrix to rotate
+                cubeRotation,     // amount to rotate in radians
+                [0, 0, 1]);       // axis to rotate around (Z)
+    mat4.rotate(modelViewMatrix,  // destination matrix
+                modelViewMatrix,  // matrix to rotate
+                cubeRotation * .7     ,// amount to rotate in radians
+                [0, 1, 0]);       // axis to rotate around (X)
+  }
+
+
 
   // Premultiply the view matrix
   mat4.multiply(modelViewMatrix, viewMatrix, modelViewMatrix);
