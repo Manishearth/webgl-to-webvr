@@ -106,7 +106,7 @@ function main() {
   enterVR = function enterVR() {
     navigator.xr.requestSession({mode: "immersive-vr"}).then((s) => {
       xrSession = s;
-      xrSession.requestReferenceSpace({ type:'stationary', subtype:'eye-level' })
+      xrSession.requestReferenceSpace("local")
       .then((referenceSpace) => {
         xrReferenceSpace = referenceSpace;
       })
