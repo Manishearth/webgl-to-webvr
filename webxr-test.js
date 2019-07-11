@@ -8,6 +8,16 @@ const canvas = document.querySelector('#canvas');
 const cw = canvas.clientWidth;
 const ch = canvas.clientHeight;
 
+const VALID_PROJECTION_MATRIX = [1, 0, 0, 0, 0, 1, 0, 0, 3, 2, -1, -1, 0, 0, -0.2, 0];
+const LEFT_OFFSET = {position: [-0.1, 0, 0], orientation: [0,0,0,1]};
+const RIGHT_OFFSET = {position: [0.1, 0, 0], orientation: [0,0,0,1]};
+const RESOLUTION = {width: 320, height: 480};
+
+const TEST_VIEWS = [
+    {eye: "left", projectionMatrix: VALID_PROJECTION_MATRIX, viewOffset: LEFT_OFFSET, resolution: RESOLUTION},
+    {eye: "right", projectionMatrix: VALID_PROJECTION_MATRIX, viewOffset: RIGHT_OFFSET, resolution: RESOLUTION}
+];
+
 var mock;
 
 main();
@@ -17,9 +27,11 @@ main();
 //
 function main() {
 
-  navigator.xr.test.simulateDeviceConnection({supportsImmersive: true}).then((m) => {
-    mock = m;
-  });
+  navigator.xr.test.simulateDeviceConnection({
+      supportsImmersive: true,
+      views: TEST_VIEWS,
+      viewerOrigin: {position: [0.5, 0, 0], orientation: [0, 0, 0, 1] }
+    }).then((m) => { mock = m }).catch(e => console.log(`Mock creation failed: ${e}`));
   const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
   // If we don't have a GL context, give up now
 
@@ -113,7 +125,6 @@ function main() {
       inVR = true;
       // hand the canvas to the WebVR API
       xrSession.updateRenderState({"baseLayer": new XRWebGLLayer(xrSession, gl, {})})
-       mock.setViewerOrigin({position: [0.5, 0, 0, 1], orientation: [0, 0, 0, 1] });
       const vrCallback = (now, frame) => {
           if (xrSession == null || !inVR) {
               return;
@@ -131,7 +142,7 @@ function main() {
 
           // render scene
           renderVR(gl, programInfo, buffers, deltaTime);
-          mock.setViewerOrigin({position: [0.5, 0, -cubeRotation/2, 1], orientation: [0, 0, 0, 1] });
+          mock.setViewerOrigin({position: [0.5, 0, -cubeRotation/2], orientation: [0, 0, 0, 1] });
           
 
       };
@@ -146,7 +157,7 @@ function main() {
       //   console.log(x, y);
       //   mock.setViewerOrigin({position: [x, 0, 0, 1], orientation: [0, 0, 0, 1] });
       // };
-    });
+    }).catch(e => console.log(`Session creation failed: ${e}`));
   };
 }
 
