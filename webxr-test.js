@@ -8,7 +8,10 @@ const canvas = document.querySelector('#canvas');
 const cw = canvas.clientWidth;
 const ch = canvas.clientHeight;
 
-const VALID_PROJECTION_MATRIX = [1, 0, 0, 0, 0, 1, 0, 0, 3, 2, -1, -1, 0, 0, -0.2, 0];
+const VALID_PROJECTION_MATRIX = [0.75620246, 0.0, 0.0, 0.0,
+                                           0.0, 0.68050665, 0.0, 0.0,
+                                          -0.05713458, -0.0021225351, -1.0000999, -1.0, 
+0.0, 0.0, -0.10000999, 0.0];
 const LEFT_OFFSET = {position: [-0.1, 0, 0], orientation: [0,0,0,1]};
 const RIGHT_OFFSET = {position: [0.1, 0, 0], orientation: [0,0,0,1]};
 const RESOLUTION = {width: 320, height: 480};
@@ -142,7 +145,7 @@ function main() {
 
           // render scene
           renderVR(gl, programInfo, buffers, deltaTime);
-          mock.setViewerOrigin({position: [0.5, 0, -cubeRotation/2], orientation: [0, 0, 0, 1] });
+          mock.setViewerOrigin({position: [0.5, 0, -cubeRotation*10], orientation: [0, 0, 0, 1] });
           
 
       };
@@ -240,6 +243,8 @@ function renderVR(gl, programInfo, buffers, deltaTime) {
     for (eye of pose.views) {
       renderEye(gl, programInfo, buffers, eye)
     }
+
+    window.requestAnimationFrame((e) => 1)
 }
 
 // entry point for non-WebVR rendering
