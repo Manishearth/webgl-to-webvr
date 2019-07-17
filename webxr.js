@@ -105,7 +105,9 @@ function main() {
       })
       inVR = true;
       // hand the canvas to the WebVR API
-      xrSession.updateRenderState({"baseLayer": new XRWebGLLayer(xrSession, gl, {})})
+      const xrLayer = new XRWebGLLayer(xrSession, gl);
+      xrSession.updateRenderState({"baseLayer": xrLayer});
+      gl.bindFramebuffer(gl.FRAMEBUFFER, xrLayer.framebuffer);
 
       const vrCallback = (now, frame) => {
           if (xrSession == null || !inVR) {
