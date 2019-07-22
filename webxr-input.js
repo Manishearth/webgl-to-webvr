@@ -99,7 +99,7 @@ function main() {
 
 
   enterVR = function enterVR() {
-    navigator.xr.requestSession({mode: "immersive-vr"}).then((s) => {
+    navigator.xr.requestSession("immersive-vr").then((s) => {
       xrSession = s;
       xrSession.requestReferenceSpace("local")
       .then((referenceSpace) => {
